@@ -6,9 +6,10 @@ build-backend = "setuptools.build_meta"
 name = "brats-tumor-segmentation"
 version = "0.1.0"
 
+[project.scripts]
+app = "src.inference.predict:app"
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]
-
-[tool.vercel]
-entrypoint = "src.inference.predict:app"
+
