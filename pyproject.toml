@@ -12,4 +12,7 @@ app = "src.inference.predict:app"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]
+
+[tool.vercel]
+entrypoint = "src.inference.predict:app"
 
