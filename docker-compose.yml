@@ -1,0 +1,15 @@
+services:
+  mri-brain:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mri-brain:latest
+    container_name: mri-brain-service
+    ports:
+      - "7860:7860"
+    environment:
+      - CHECKPOINT_DIR=/app/checkpoints
+      - PORT=7860
+    volumes:
+      - ./checkpoints:/app/checkpoints:ro
+    restart: unless-stopped

@@ -1,0 +1,17 @@
+.git
+.github
+.venv
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+outputs/
+data/raw/
+data/processed/
+data/synthetic/
+data/doctor_reviews/
+*.nii
+*.nii.gz
+!checkpoints/best_model.pth
