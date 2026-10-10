@@ -1,5 +1,5 @@
-import torch
 import pytest
+torch = pytest.importorskip("torch")
 from pathlib import Path
 from src.training.dataset import BraTSDataset
 

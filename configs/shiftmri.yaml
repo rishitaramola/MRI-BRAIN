@@ -1,0 +1,66 @@
+# configs/shiftmri.yaml
+# ShiftMRI perturbation experiment configuration.
+#
+# IMPORTANT: These ranges are engineering judgement, chosen to match the
+# training augmentation ranges in src/training/transforms.py:
+#   - RandScaleIntensityd  factors=0.1  → scale in [0.9, 1.1]
+#   - RandShiftIntensityd  offsets=0.1  → shift in [-0.1, +0.1]
+#   - RandGaussianNoised   (MONAI default sigma ~0.1)
+#
+# They are NOT calibrated to real inter-scanner or cross-site variation.
+# Do not interpret results as representative of real-world distribution shift.
+#
+# All perturbations are applied to the PREPROCESSED network input
+# (post-N4, post-z-score) in z-score units, inside the brain mask.
+# Global scale/shift before z-scoring would be cancelled by the normaliser;
+# see tests/test_shiftmri_perturbations.py::test_prescale_cancelled_by_zscore.
+
+perturbations:
+
+  # -- Gaussian noise (z-score units) --
+  - name: noise_sigma0.1
+    type: gaussian_noise
+    sigma: 0.1           # mild, matches training augmentation range
+
+  - name: noise_sigma0.2
+    type: gaussian_noise
+    sigma: 0.2           # moderate, 2× training range
+
+  # -- Intensity scale (multiplicative in z-score space) --
+  - name: scale0.9_shift0
+    type: intensity_scale_shift
+    scale: 0.9           # matches training RandScaleIntensityd floor
+    shift: 0.0
+
+  - name: scale1.1_shift0
+    type: intensity_scale_shift
+    scale: 1.1           # matches training RandScaleIntensityd ceiling
+    shift: 0.0
+
+  # -- Intensity shift (additive in z-score space) --
+  - name: scale1.0_shift+0.1
+    type: intensity_scale_shift
+    scale: 1.0
+    shift: 0.1           # matches training RandShiftIntensityd ceiling
+
+  - name: scale1.0_shift-0.1
+    type: intensity_scale_shift
+    scale: 1.0
+    shift: -0.1          # matches training RandShiftIntensityd floor
+
+  # -- Combined scale + shift --
+  - name: scale0.8_shift+0.2
+    type: intensity_scale_shift
+    scale: 0.8           # beyond single augmentation range, combined stress
+    shift: 0.2
+
+  # -- Resolution degradation along slice axis (axis 2 = z/depth) --
+  - name: downsample_2x_ax2
+    type: downsample_restore
+    factor: 2
+    axis: 2              # simulates 2× coarser slice thickness
+
+  - name: downsample_3x_ax2
+    type: downsample_restore
+    factor: 3
+    axis: 2              # simulates 3× coarser slice thickness

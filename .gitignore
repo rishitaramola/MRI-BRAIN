@@ -213,3 +213,9 @@ data/processed/
 /data/kaggledata/
 /data/splits/dataset-metadata.json
 *.DS_Store
+
+# ShiftMRI experiment outputs and generated data
+outputs/
+data/synthetic/
+data/doctor_reviews/
+*.nii.gz
