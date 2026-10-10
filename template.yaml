@@ -1,0 +1,127 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: 'ShiftMRI AWS Infrastructure: S3, IAM, Lambda, and SageMaker integration'
+
+Resources:
+
+  ShiftMRIDataBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub 'shiftmri-data-${AWS::AccountId}-${AWS::Region}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  SageMakerExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sagemaker.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: SageMakerS3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - !GetAtt ShiftMRIDataBucket.Arn
+                  - !Sub '${ShiftMRIDataBucket.Arn}/*'
+
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: LambdaSageMakerS3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - !GetAtt ShiftMRIDataBucket.Arn
+                  - !Sub '${ShiftMRIDataBucket.Arn}/*'
+              - Effect: Allow
+                Action:
+                  - 'sagemaker:CreateProcessingJob'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'iam:PassRole'
+                Resource: !GetAtt SageMakerExecutionRole.Arn
+
+  ShiftMRIOrchestratorLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: ShiftMRIOrchestrator
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.9
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import os
+
+          sagemaker = boto3.client('sagemaker')
+          s3 = boto3.client('s3')
+
+          def lambda_handler(event, context):
+              bucket = os.environ['S3_BUCKET']
+              role_arn = os.environ['SAGEMAKER_ROLE']
+
+              # Extract payload
+              body = json.loads(event.get('body', '{}'))
+              experiment_id = body.get('experiment_id', 'unknown')
+
+              # Trigger SageMaker Job
+              response = sagemaker.create_processing_job(
+                  ProcessingJobName=f'shiftmri-job-{experiment_id}',
+                  RoleArn=role_arn,
+                  AppSpecification={
+                      'ImageUri': '763104351884.dkr.ecr.us-east-1.amazonaws.com/pytorch-inference:1.4.0-cpu-py36-ubuntu16.04',
+                      'ContainerEntrypoint': ['python3', '/opt/ml/processing/input/code/src/inference.py', '/opt/ml/processing/input/code/resources/config.ini']
+                  },
+                  ProcessingResources={
+                      'ClusterConfig': {
+                          'InstanceCount': 1,
+                          'InstanceType': 'ml.m5.xlarge',
+                          'VolumeSizeInGB': 30
+                      }
+                  }
+              )
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps({'message': 'SageMaker Job Triggered', 'jobArn': response['ProcessingJobArn']})
+              }
+      Environment:
+        Variables:
+          S3_BUCKET: !Ref ShiftMRIDataBucket
+          SAGEMAKER_ROLE: !GetAtt SageMakerExecutionRole.Arn
+
+Outputs:
+  S3BucketName:
+    Value: !Ref ShiftMRIDataBucket
+  LambdaFunctionName:
+    Value: !Ref ShiftMRIOrchestratorLambda
