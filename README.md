@@ -3,6 +3,9 @@
 > **RESEARCH PROTOTYPE ONLY — NOT CLINICALLY VALIDATED — NOT A DIAGNOSTIC TOOL**  
 > ShiftMRI is an open-source research prototype investigating model reliability, perturbation stability, and multi-model disagreement in brain tumor segmentation.  
 > It does **not** provide clinical diagnoses, malignancy assessments, prognostic evaluations, or treatment recommendations. A change in model prediction under perturbation or disagreement between models does **not** prove that any prediction is clinically correct or incorrect.
+>
+> <img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/02c2ea16-c0b4-48a3-b863-b6c9df165f10" />
+
 
 ---
 
