@@ -9,3 +9,6 @@ version = "0.1.0"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]
+
+[tool.vercel]
+entrypoint = "src.inference.predict:app"
